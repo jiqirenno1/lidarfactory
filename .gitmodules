@@ -1,0 +1,3 @@
+[submodule "rs_driver"]
+	path = rs_driver
+	url = git@github.com:RoboSense-LiDAR/rs_driver.git
