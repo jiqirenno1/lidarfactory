@@ -12,7 +12,19 @@ pcl::PointCloud<PointT>::Ptr clicked_points_3d(new PointCloudT);
 pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("Viewer"));
 std::vector<PointT> v;
 
-void pp_callback_PointsSelect(const pcl::visualization::PointPickingEvent& event, void* args)
+void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event, void* args) {
+
+    if (event.getKeySym() == "r" && event.keyDown()) {
+        std::cout <<"repick!"<<std::endl;
+        viewer->removePointCloud("clicked_points");
+        clicked_points_3d->clear();
+        v.clear();
+    }
+}
+
+
+
+    void pp_callback_PointsSelect(const pcl::visualization::PointPickingEvent& event, void* args)
 {
     if(event.getPointIndex()==-1)
         return;
@@ -36,7 +48,7 @@ void WritePoints()
     std::cout<<"write file done! "<<std::endl;
     for(auto it=v.begin();it!=v.end();++it)
     {
-        out<<(*it).x<<" "<<(*it).y<<" "<<(*it).z<<endl;
+        out<<(*it).x<<" "<<(*it).y<<" "<<(*it).z<<std::endl;
     }
 }
 
@@ -99,7 +111,7 @@ int main()
 
 
 
-    std::string filename("/home/ubuntu/lidar/configuration_data/test_pcd_pcl.pcd");
+    std::string filename("/home/ubuntu/lidar/data/ZHAO123AST_600.pcd");
 
     if(pcl::io::loadPCDFile(filename, *cloud))
     {
@@ -109,10 +121,11 @@ int main()
 
     viewer->addCoordinateSystem();
     viewer->addPointCloud(cloud, "calib");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "calib");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "calib");
 //    viewer->setCameraPosition(0,0,-5,-2,-1,0,0);
     viewer->registerPointPickingCallback(pp_callback_PointsSelect, (void*)&cloud);
-    std::cout << "Shift+click on three floor points, then press 'Q'..." << std::endl;
+    viewer->registerKeyboardCallback(keyboardEventOccurred, (void*)&cloud);
+    std::cout << "Shift+click to pick points, r for reset,  then press 'Q'..." << std::endl;
     viewer->spin();
 
     int vSize = v.size();

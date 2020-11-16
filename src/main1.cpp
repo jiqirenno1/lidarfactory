@@ -9,10 +9,24 @@
 using namespace robosense::lidar;
 
 robosense::lidar::Queue<robosense::lidar::PointCloudMsg<pcl::PointXYZ>> msg_queue;
-//pcl::visualization::PCLVisualizer::Ptr viewer =pcl::shared_ptr<pcl::visualization::PCLVisualizer>(
-//    new pcl::visualization::PCLVisualizer("RS LIDAR 16 Viewer"));
 
-
+//void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event, void* cloud_void)
+//{
+//
+//    pcl::PointCloud<pcl::PointXYZ> *cloud = static_cast<pcl::PointCloud<pcl::PointXYZ>*>(cloud_void);
+//    if(event.getKeySym()=="s"&& event.keyDown())
+//    {
+//        if(1)
+//        {
+//            std::cout<<"** size: "<<cloud->size()<<"  **width*height: "<<cloud->width*cloud->height<<std::endl;
+//            std::cout<<"save PCD!"<<std::endl;
+//            pcl::io::savePCDFile ("/home/ubuntu/lidar/configuration_data/s_pcd_pcl.pcd", *cloud);
+//        }
+//
+//    }
+//
+//
+//}
 
 void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
 {
@@ -25,7 +39,7 @@ void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
         auto msg = msg_queue.front();
         msg_queue.popFront();
 
-        pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
         point_cloud->header.stamp = msg.timestamp;
         point_cloud->header.seq = msg.seq;
@@ -36,6 +50,7 @@ void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
 
         size_t n_points = msg.point_cloud_ptr->size();
         point_cloud->points.resize(n_points);
+        std::cout<<"** size: "<<n_points<<"  **width*height: "<<point_cloud->width*point_cloud->height<<std::endl;
         std::cout<<"** size: "<<n_points<<"  **seq: "<<point_cloud->header.seq<<std::endl;
         for(size_t i=0;i<n_points;i++)
         {
@@ -44,15 +59,16 @@ void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
             point_cloud->points.at(i).z = msg.point_cloud_ptr->at(i).z;
         }
 
-//        if(n_points==28800)
-//        {
-//            std::cout<<"save PCD!"<<std::endl;
-//            pcl::io::savePCDFile ("/home/ubuntu/lidar/configuration_data/test_pcd_pcl.pcd", *point_cloud);
-//        }
+        if(point_cloud->header.seq%100==0)
+        {
+            std::cout<<"save PCD!"<<std::endl;
+            pcl::io::savePCDFile ("/home/ubuntu/lidar/data/ZHAO_"+ std::to_string(point_cloud->header.seq)+".pcd", *point_cloud);
+        }
         viewer->removeAllPointClouds();
         viewer->removeAllShapes();
 //        renderPointCloud(point_cloud, msg.frame_id+std::to_string(msg.seq));
-        viewer->addPointCloud<pcl::PointXYZI> (point_cloud, msg.frame_id+std::to_string(msg.seq));
+        pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZ> rgb(point_cloud, "z");
+        viewer->addPointCloud<pcl::PointXYZ> (point_cloud, rgb, msg.frame_id+std::to_string(msg.seq));
         viewer->spinOnce();
 
 
@@ -118,12 +134,19 @@ int main(int argc, char* argv[])
 
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("RS LIDAR 16 Viewer"));
     viewer->addCoordinateSystem();
-
-    while (true)
+//
+//    while (true)
+//    {
+////        sleep(1);
+//        show(viewer);
+//    }
+    while(!viewer->wasStopped())
     {
-//        sleep(1);
         show(viewer);
+        viewer->spinOnce();
+
     }
     return 0;
+
 
 }
