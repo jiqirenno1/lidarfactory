@@ -14,11 +14,23 @@ include(rs_driver)
 include_directories(${rs_driver_INCLUDE_DIRS})
 ##
 
+## embedding STSservo
+file(GLOB hdrs STSservo/*.h)
+file(GLOB srs STSservo/*.cpp)
+#message(${hdrs})
+add_library(STSservo ${hdrs} ${srs})
+include_directories(./STSservo)
+
+
+
 add_executable(visualize src/main1.cpp)
-target_link_libraries(visualize ${rs_driver_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(visualize ${rs_driver_LIBRARIES} ${PCL_LIBRARIES} STSservo)
 
 add_executable(calib src/calibrate.cpp)
 target_link_libraries(calib ${PCL_LIBRARIES})
 
 add_executable(test src/test.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
 target_link_libraries(test ${PCL_LIBRARIES})
+
+add_executable(testSTS src/testSTS.cpp)
+target_link_libraries(testSTS STSservo)

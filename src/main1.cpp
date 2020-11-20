@@ -6,9 +6,12 @@
 #include "rs_driver/api/lidar_driver.h"
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/io/pcd_io.h>
+#include "SMSCL.h"
 using namespace robosense::lidar;
 
-robosense::lidar::Queue<robosense::lidar::PointCloudMsg<pcl::PointXYZ>> msg_queue;
+SMSCL sm;
+
+robosense::lidar::Queue<std::pair<robosense::lidar::PointCloudMsg<pcl::PointXYZ>, int>> msg_queue;
 
 //void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event, void* cloud_void)
 //{
@@ -28,16 +31,49 @@ robosense::lidar::Queue<robosense::lidar::PointCloudMsg<pcl::PointXYZ>> msg_queu
 //
 //}
 
+int getPos()
+{
+    int pos;
+    if(sm.FeedBack(1)!=-1){
+        pos = sm.ReadPos(-1);
+        std::cout<< "pos ="<<pos<<std::endl;
+    }
+    return pos;
+}
+
+void run()
+{
+    s16 pos0 = 2048;
+    s16 step = 20;
+    while(1) {
+
+        s16 pos1 = pos0 + step;
+        if (pos1 >= 2248 || pos1 <= 2048)
+        {
+            step = -step;
+        }
+        sm.WritePosEx(1, pos1, 200, 3);
+        usleep(700*1000);
+        if(sm.FeedBack(1)!=-1){
+            std::cout<< "pos"<<pos1<<" ="<<sm.ReadPos(-1)<<std::endl;
+        }
+        pos0=pos1;
+    }
+}
+
 void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
 {
+    int pos = getPos();
     if(msg_queue.size()==0)
     {
         return;
     }
     while(msg_queue.size()>0)
     {
-        auto msg = msg_queue.front();
+        auto res = msg_queue.front();
         msg_queue.popFront();
+        auto msg = res.first;
+        int pos = res.second;
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -59,10 +95,10 @@ void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
             point_cloud->points.at(i).z = msg.point_cloud_ptr->at(i).z;
         }
 
-        if(point_cloud->header.seq%100==0)
+        if(point_cloud->header.seq%1==0)
         {
             std::cout<<"save PCD!"<<std::endl;
-            pcl::io::savePCDFile ("/home/ubuntu/lidar/data/ZHAO_"+ std::to_string(point_cloud->header.seq)+".pcd", *point_cloud);
+            pcl::io::savePCDFile ("/home/ubuntu/lidar/poshe1/6pos"+ std::to_string(pos)+".pcd", *point_cloud);
         }
         viewer->removeAllPointClouds();
         viewer->removeAllShapes();
@@ -93,7 +129,10 @@ void pointCloudCallback(const PointCloudMsg<pcl::PointXYZ>& msg)
     /* Note: Please do not put time-consuming operations in the callback function! */
     /* Make a copy of the message and process it in another thread is recommended*/
     RS_MSG << "msg: " << msg.seq <<" msg.width: "<<msg.width <<" point cloud size: " << msg.point_cloud_ptr->size() << RS_REND;
-    msg_queue.push(std::move(msg));
+    int pos = getPos();
+    std::pair<robosense::lidar::PointCloudMsg<pcl::PointXYZ>, int> res(std::move(msg), pos);
+    msg_queue.push(res);
+
 }
 
 /**
@@ -109,6 +148,19 @@ void exceptionCallback(const Error& code)
 
 int main(int argc, char* argv[])
 {
+
+    std::string path = "/dev/ttyUSB0";
+    std::cout<< "serial:"<<path<<std::endl;
+    if(!sm.begin(115200, path.c_str())){
+        std::cout<< "Failed to init smscl motor!"<<std::endl;
+        return 0;
+    }
+    sm.WritePosEx(1, 2048, 1000, 10);
+    usleep(2270*1000);
+    sm.FeedBack(1);
+    std::cout<< " init pos ="<<sm.ReadPos(-1)<<std::endl;
+    std::thread t(run);
+
     RS_TITLE << "------------------------------------------------------" << RS_REND;
     RS_TITLE << "            RS_Driver Core Version: V " << RSLIDAR_VERSION_MAJOR << "." << RSLIDAR_VERSION_MINOR << "."
              << RSLIDAR_VERSION_PATCH << RS_REND;
@@ -134,6 +186,8 @@ int main(int argc, char* argv[])
 
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("RS LIDAR 16 Viewer"));
     viewer->addCoordinateSystem();
+
+
 //
 //    while (true)
 //    {
@@ -146,6 +200,7 @@ int main(int argc, char* argv[])
         viewer->spinOnce();
 
     }
+    t.join();
     return 0;
 
 

@@ -166,7 +166,7 @@ pcl::PolygonMesh ProcessPointClouds::GreedyTriangle(PtCdPtr cloud) {
     pcl::PolygonMesh triangles;//存储最终三角化的网络模型
 
     // Set the maximum distance between connected points (maximum edge length)
-    gp3.setSearchRadius (3.0);         //设置搜索半径radius，来确定三角化时k一邻近的球半径。
+    gp3.setSearchRadius (1.5);         //设置搜索半径radius，来确定三角化时k一邻近的球半径。
 
     // Set typical values for the parameters
     gp3.setMu (1.5);                     //设置样本点到最近邻域距离的乘积系数 mu 来获得每个样本点的最大搜索距离，这样使得算法自适应点云密度的变化
