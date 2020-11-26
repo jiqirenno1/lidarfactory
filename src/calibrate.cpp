@@ -111,7 +111,7 @@ int main()
 
 
 
-    std::string filename("/home/ubuntu/lidar/data/ZHAO123AST_600.pcd");
+    std::string filename("/home/ubuntu/lidar/combine.pcd");
 
     if(pcl::io::loadPCDFile(filename, *cloud))
     {
@@ -121,7 +121,7 @@ int main()
 
     viewer->addCoordinateSystem();
     viewer->addPointCloud(cloud, "calib");
-    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "calib");
+//    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "calib");
 //    viewer->setCameraPosition(0,0,-5,-2,-1,0,0);
     viewer->registerPointPickingCallback(pp_callback_PointsSelect, (void*)&cloud);
     viewer->registerKeyboardCallback(keyboardEventOccurred, (void*)&cloud);

@@ -27,6 +27,22 @@ PtCdPtr ProcessPointClouds::CropCloud(PtCdPtr cloud, Eigen::Vector4f minPoint, E
     return regionCloud;
 }
 
+
+PtCdPtr ProcessPointClouds::CropCloudZ(PtCdPtr cloud, float minZ, float maxZ) {
+    PtCdPtr outCloud(new pcl::PointCloud<PointT>);
+    size_t nums = cloud->size();
+    for(size_t i=0;i<nums;i++)
+    {
+        float z=cloud->points[i].z;
+        if(z>=minZ&&z<=maxZ)
+        {
+            outCloud->points.push_back(cloud->points[i]);
+        }
+
+    }
+    return outCloud;
+}
+
 std::pair<PtCdPtr, PtCdPtr> ProcessPointClouds::SegmentPlane(PtCdPtr cloud, int maxIterations, float distance) {
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficient(new pcl::ModelCoefficients);
@@ -166,10 +182,10 @@ pcl::PolygonMesh ProcessPointClouds::GreedyTriangle(PtCdPtr cloud) {
     pcl::PolygonMesh triangles;//存储最终三角化的网络模型
 
     // Set the maximum distance between connected points (maximum edge length)
-    gp3.setSearchRadius (1.5);         //设置搜索半径radius，来确定三角化时k一邻近的球半径。
+    gp3.setSearchRadius (0.5);         //设置搜索半径radius，来确定三角化时k一邻近的球半径。
 
     // Set typical values for the parameters
-    gp3.setMu (1.5);                     //设置样本点到最近邻域距离的乘积系数 mu 来获得每个样本点的最大搜索距离，这样使得算法自适应点云密度的变化
+    gp3.setMu (2.5);                     //设置样本点搜索其近邻点的最远距离为2.5倍（典型值2.5-3），这样使得算法自适应点云密度的变化
     gp3.setMaximumNearestNeighbors (100);//设置样本点最多可以搜索的邻域数目100 。
     gp3.setMaximumSurfaceAngle(M_PI/4);  //45 degrees，设置连接时的最大角度 eps_angle ，当某点法线相对于采样点的法线偏离角度超过该最大角度时，连接时就不考虑该点。
     gp3.setMinimumAngle(M_PI/18);        //10 degrees，设置三角化后三角形的最小角，参数 minimum_angle 为最小角的值。
@@ -228,7 +244,7 @@ pcl::PolygonMesh ProcessPointClouds::MarchingCubeTriangle(PtCdPtr cloud) {
     pcl::PolygonMesh mesh;
 
     mc->setIsoLevel(0.0f);
-    mc->setGridResolution(50,50,50);
+    mc->setGridResolution(150,150,150);
     mc->setPercentageExtendGrid(0.0f);
 
     mc->setInputCloud(cloud_with_normals);
@@ -265,5 +281,53 @@ PtCdPtr ProcessPointClouds::BilateralFilter(PtCdPtr cloud) {
 
     return outCloud;
 }
+
+pcl::PointCloud<pcl::PointNormal> ProcessPointClouds::Smoothing(PtCdPtr cloud) {
+
+    pcl::PointCloud<pcl::PointNormal> mls_points;
+    pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
+    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+
+    mls.setComputeNormals(true);
+    mls.setInputCloud(cloud);
+    mls.setPolynomialOrder(2);
+    mls.setSearchMethod(tree);
+    mls.setSearchRadius(0.5);
+
+    //  mls.setUpsamplingMethod (MovingLeastSquares<PointXYZ, PointNormal>::SAMPLE_LOCAL_PLANE);
+//  mls.setUpsamplingMethod (MovingLeastSquares<PointXYZ, PointNormal>::RANDOM_UNIFORM_DENSITY);
+//  mls.setUpsamplingMethod (MovingLeastSquares<PointXYZ, PointNormal>::VOXEL_GRID_DILATION);
+    mls.setUpsamplingMethod (pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal>::RANDOM_UNIFORM_DENSITY);
+    mls.setPointDensity ( int (1));
+//    mls.setUpsamplingRadius (1);
+//    mls.setUpsamplingStepSize (0.5);
+//    mls.setDilationIterations (2);
+//    mls.setDilationVoxelSize (0.8f);
+
+    mls.process(mls_points);
+    return mls_points;
+}
+
+PtCdPtr ProcessPointClouds::PassThrough(PtCdPtr cloud, std::string axis, float min, float max) {
+    PtCdPtr out(new pcl::PointCloud<PointT>);
+    pcl::PassThrough<PointT> pass;
+    pass.setInputCloud(cloud);
+    pass.setFilterFieldName(axis);
+    pass.setFilterLimits(min, max);
+    pass.filter(*out);
+    return out;
+}
+
+PtCdPtr ProcessPointClouds::RemovalOutlier(PtCdPtr cloud) {
+    PtCdPtr res(new pcl::PointCloud<PointT>);
+    pcl::StatisticalOutlierRemoval<PointT> sor;
+    sor.setInputCloud(cloud);
+    sor.setMeanK(50); //近邻搜索点个数
+    sor.setStddevMulThresh(1.0); //标准差倍数
+    sor.setNegative(false); //保留未滤波点（内点）
+    sor.filter(*res);
+    return res;
+}
+
 
 

@@ -29,6 +29,52 @@ PtCdPtr lidar2base(PtCdPtr cloud, double theta)
 
 int main()
 {
+    std::string file = "/home/ubuntu/lidar/combine.pcd";
+    std::string file1 = "/home/ubuntu/lidar/sml.pcd";
+    PtCdPtr cloud(new pcl::PointCloud<PointT>);
+    pcl::io::loadPCDFile(file, *cloud);
+//    std::cout<<"mesh: "<<cloud->height<<"\n";
+
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("viewer"));
+    viewer->addCoordinateSystem();
+    auto proI = new ProcessPointClouds();
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> r(cloud, 0, 255, 0);
+    pcl::visualization::PointCloudColorHandlerGenericField<PointT> rgb(cloud, "z");
+
+    //PtCdPtr cloudP = proI->PassThrough(cloud, "z",-1.3, -0.3);
+    PtCdPtr cloudP = cloud;
+    std::cout<<"before : "<<cloud->size()<<"\n";
+    PtCdPtr res = proI->RemovalOutlier(cloudP);
+    std::cout<<"after : "<<res->size()<<"\n";
+
+    std::pair<PtCdPtr, PtCdPtr> result = proI->SegmentPlane(cloudP, 50, 0.1);
+//    viewer->addPointCloud(result.first, "plane");
+    std::cout<<"size 1 : "<<result.first->size()<<"\n";
+    pcl::PointCloud<pcl::PointNormal> outCloud = proI->Smoothing(result.first);
+    std::cout<<"size 2 : "<<outCloud.size()<<"\n";
+
+    PtCdPtr sm(new pcl::PointCloud<PointT>);
+    size_t ss = outCloud.size();
+    sm->resize(ss);
+    for(size_t i=0;i<ss;i++)
+    {
+        sm->points[i].x = outCloud.points[i].x;
+        sm->points[i].y = outCloud.points[i].y;
+        sm->points[i].z = outCloud.points[i].z;
+    }
+    std::cout<<"size 3 : "<<sm->size()<<"\n";
+
+//    viewer->addPointCloud(cloudP, r, "cloudall");
+     viewer->addPointCloud(cloudP, "cloud");
+//    PtCdPtr smdown = proI->DownSampleCloud(sm, 0.3);
+    pcl::PolygonMesh mesh=proI->GreedyTriangle(res);
+    viewer->addPolygonMesh(mesh, "mesh");
+//    std::cout<<"mesh: "<<mesh.polygons.size()<<"\n";
+      viewer->spin();
+
+}
+int mainlp()
+{
     std::string file0 = "/home/ubuntu/lidar/poshe1/6pos2048.pcd";
     PtCdPtr cloud1(new pcl::PointCloud<PointT>);
     pcl::io::loadPCDFile(file0, *cloud1);
@@ -41,6 +87,7 @@ int main()
     PtCdPtr combine(new pcl::PointCloud<PointT>);
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("pcd viewer"));
     viewer->addCoordinateSystem();
+    int lastP=0;
     for(auto &e:paths)
     {
         PtCdPtr cloud(new pcl::PointCloud<PointT>);
@@ -51,10 +98,23 @@ int main()
         auto pos = name.find_last_of('/');
         auto leaf = name.substr(pos+5, 4);
         int p = atoi(leaf.c_str());
+        if((p-lastP)<2)
+        {
+            lastP = p;
+            continue;
+        }
+        lastP = p;
         std::cout<<p<<"\n";
         double theta1 = M_PI/180*(p-2048)/4096*360;
         *combine+=*lidar2base(cloud, theta1);
         std::cout<<"then combine size: "<<combine->size()<<std::endl;
+
+        viewer->removePointCloud("cloud");
+
+        pcl::visualization::PointCloudColorHandlerCustom<PointT> r(combine,0, 255, 0);
+        viewer->addPointCloud(combine, r, "cloud");
+        viewer->spinOnce();
+        //sleep(1);
 
     }
     ProcessPointClouds *proI =new ProcessPointClouds();
@@ -65,8 +125,10 @@ int main()
 //    viewer->addPointCloud(cloud1, r, "cloud1");
 //    viewer->addPointCloud(combine, b, "cloud");
 
-    pcl::PolygonMesh mesh = proI->GreedyTriangle(combine);
+//    pcl::io::savePCDFile ("/home/ubuntu/lidar/combine.pcd", *combine);
+    pcl::PolygonMesh mesh= proI->GreedyTriangle(combine);
     std::cout<<"mesh: "<<mesh.polygons.size()<<"\n";
+    viewer->removePointCloud("cloud");
     viewer->addPolygonMesh(mesh, "mesh");
 
 

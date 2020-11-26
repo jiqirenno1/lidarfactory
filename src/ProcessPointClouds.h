@@ -10,6 +10,8 @@
 #include <pcl/filters/crop_box.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/surface/gp3.h>
 #include <pcl/surface/poisson.h>
@@ -17,6 +19,7 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/filters/fast_bilateral.h>
 #include <pcl/features/organized_edge_detection.h>
+#include <pcl/surface/mls.h>
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT>::Ptr PtCdPtr;
 class ProcessPointClouds {
@@ -25,6 +28,9 @@ public:
     ~ProcessPointClouds();
     PtCdPtr DownSampleCloud(PtCdPtr cloud, float res);
     PtCdPtr CropCloud(PtCdPtr cloud, Eigen::Vector4f minPoint, Eigen::Vector4f maxPoint);
+    PtCdPtr CropCloudZ(PtCdPtr cloud, float minZ, float maxZ);
+    PtCdPtr PassThrough(PtCdPtr cloud, std::string axis, float min, float max);
+    PtCdPtr RemovalOutlier(PtCdPtr cloud);
     std::pair<PtCdPtr, PtCdPtr> SegmentPlane(PtCdPtr cloud, int maxIterations, float distance);
     std::pair<PtCdPtr, PtCdPtr> SegmentPlaneWithNormal(PtCdPtr cloud, int maxIterations, float distance);
     std::pair<PtCdPtr, PtCdPtr> SegmentCylinder(PtCdPtr cloud);
@@ -35,6 +41,7 @@ public:
     pcl::PolygonMesh MarchingCubeTriangle(PtCdPtr cloud);
     pcl::PolygonMesh CalConvexHull(PtCdPtr cloud);
     PtCdPtr BilateralFilter(PtCdPtr cloud);
+    pcl::PointCloud<pcl::PointNormal> Smoothing(PtCdPtr cloud);
 
 
 

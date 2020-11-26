@@ -7,6 +7,7 @@ find_package(PCL REQUIRED)
 #include_directories( "/usr/local/include/pcl-1.11" )
 #link_directories("/usr/lib/x86_64-linux-gnu/libpcl_common.so" "/usr/lib/x86_64-linux-gnu/libpcl_io.so")
 
+find_package(OpenCV REQUIRED)
 
 # embedding rs_driver
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/rs_driver/cmake)
@@ -34,3 +35,6 @@ target_link_libraries(test ${PCL_LIBRARIES})
 
 add_executable(testSTS src/testSTS.cpp)
 target_link_libraries(testSTS STSservo)
+
+add_executable(crush src/crush.cpp)
+target_link_libraries(crush ${OpenCV_LIBRARIES})
