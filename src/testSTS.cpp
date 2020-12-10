@@ -1,9 +1,29 @@
 #include <iostream>
 #include "SMSCL.h"
+#include <thread>
 
 SMSCL sm;
 
 
+void run()
+{
+    s16 pos0 = 2048;
+    s16 step = 200;
+    while(1) {
+
+        s16 pos1 = pos0 + step;
+        if (pos1 >= 2248 || pos1 <= 1848)
+        {
+            step = -step;
+        }
+        sm.WritePosEx(1, pos1, 300, 20);
+        usleep(1100*1000);
+        if(sm.FeedBack(1)!=-1){
+            std::cout<< "pos"<<pos1<<" ="<<sm.ReadPos(-1)<<std::endl;
+        }
+        pos0=pos1;
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -17,8 +37,16 @@ int main(int argc, char **argv)
         std::cout<< "Failed to init smscl motor!"<<std::endl;
         return 0;
     }
+    sm.unLockEprom(1);//打开EPROM保存功能
+    std::cout<< "unLock Eprom"<<std::endl;
+    sm.writeByte(1, SMSCL_COMPLIANCE_P, 8);//ID
+    sm.writeByte(1, SMSCL_COMPLIANCE_I, 0);
+    sm.writeByte(1, SMSCL_COMPLIANCE_D, 8);
+
+
+    sm.LockEprom(2);////关闭EPROM保存功能
 //    sm.CalibrationOfs(1);
-//    sm.FeedBack(1);
+    sm.FeedBack(1);
 //    while(1){
 //        sm.WritePosEx(1, 4095, 2250, 50);//舵机(ID1)以最高速度V=2250步/秒，加速度A=50(50*100步/秒^2)，运行至P1=4095位置
 //        std::cout<< "pos ="<<4095<<std::endl;
@@ -33,23 +61,35 @@ int main(int argc, char **argv)
     usleep(2270*1000);
     sm.FeedBack(1);
     std::cout<< " init pos ="<<sm.ReadPos(-1)<<std::endl;
-
-    s16 pos0 = 2048;
-    s16 step = 20;
-    while(1) {
-
-        s16 pos1 = pos0 + step;
-        if (pos1 >= 2348 || pos1 <= 2048)
+    std::thread t(run);
+    int i=1000000;
+    while(0)
+    {
+        if(i%100==0)
         {
-            step = -step;
+            sm.FeedBack(1);
+            std::cout<< " ******get pos ="<<sm.ReadPos(-1)<<std::endl;
+
         }
-        sm.WritePosEx(1, pos1, 200, 3);
-        usleep(700*1000);
-        if(sm.FeedBack(1)!=-1){
-            std::cout<< "pos"<<pos1<<" ="<<sm.ReadPos(-1)<<std::endl;
-        }
-        pos0=pos1;
     }
+
+    t.join();
+    s16 pos0 = 2048;
+    s16 step = 300;
+//    while(1) {
+//
+//        s16 pos1 = pos0 + step;
+//        if (pos1 >= 2348 || pos1 <= 2048)
+//        {
+//            step = -step;
+//        }
+//        sm.WritePosEx(1, pos1, 1000, 10);
+//        usleep(700*1000);
+//        if(sm.FeedBack(1)!=-1){
+//            std::cout<< "pos"<<pos1<<" ="<<sm.ReadPos(-1)<<std::endl;
+//        }
+//        pos0=pos1;
+//    }
 
     while(0){
 

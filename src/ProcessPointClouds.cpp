@@ -57,11 +57,12 @@ std::pair<PtCdPtr, PtCdPtr> ProcessPointClouds::SegmentPlane(PtCdPtr cloud, int 
     seg.setInputCloud(cloud);
     seg.segment(*inliers, *coefficient);
     std::vector<float> coeff = coefficient->values;
-    for(auto &e:coeff)
-    {
-        std::cout<<"coeff: "<<e<<std::endl;
-
-    }
+    //print coeff
+//    for(auto &e:coeff)
+//    {
+//        std::cout<<"coeff: "<<e<<std::endl;
+//
+//    }
 
 
     if (inliers->indices.size() == 0) {
@@ -164,6 +165,8 @@ pcl::PointCloud<pcl::Normal>::Ptr ProcessPointClouds::GetNormals(PtCdPtr cloud) 
     tree->setInputCloud(cloud);
     n.setInputCloud(cloud);
     n.setSearchMethod(tree);
+    // Use all neighbors in a sphere of radius 1cm
+    //n.setRadiusSearch(1);
     n.setKSearch(20);
     n.compute(*normals);
     return normals;
@@ -298,7 +301,7 @@ pcl::PointCloud<pcl::PointNormal> ProcessPointClouds::Smoothing(PtCdPtr cloud) {
 //  mls.setUpsamplingMethod (MovingLeastSquares<PointXYZ, PointNormal>::RANDOM_UNIFORM_DENSITY);
 //  mls.setUpsamplingMethod (MovingLeastSquares<PointXYZ, PointNormal>::VOXEL_GRID_DILATION);
     mls.setUpsamplingMethod (pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal>::RANDOM_UNIFORM_DENSITY);
-    mls.setPointDensity ( int (1));
+    mls.setPointDensity ( 20*int (1));
 //    mls.setUpsamplingRadius (1);
 //    mls.setUpsamplingStepSize (0.5);
 //    mls.setDilationIterations (2);
@@ -322,11 +325,109 @@ PtCdPtr ProcessPointClouds::RemovalOutlier(PtCdPtr cloud) {
     PtCdPtr res(new pcl::PointCloud<PointT>);
     pcl::StatisticalOutlierRemoval<PointT> sor;
     sor.setInputCloud(cloud);
-    sor.setMeanK(50); //近邻搜索点个数
+    sor.setMeanK(100); //近邻搜索点个数
     sor.setStddevMulThresh(1.0); //标准差倍数
     sor.setNegative(false); //保留未滤波点（内点）
     sor.filter(*res);
     return res;
+}
+
+std::vector<PtCdPtr> ProcessPointClouds::RegionGrowing(PtCdPtr cloud) {
+    pcl::PointCloud<pcl::Normal>::Ptr normals =GetNormals(cloud);
+    pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
+    pcl::RegionGrowing<PointT, pcl::Normal> reg;
+    reg.setMinClusterSize(300);
+    reg.setMaxClusterSize(1000000);
+    reg.setSearchMethod(tree);
+    reg.setNumberOfNeighbours(50);
+    reg.setInputCloud(cloud);
+    reg.setInputNormals(normals);
+    reg.setSmoothnessThreshold(3.0/180.0*M_PI);
+    reg.setCurvatureThreshold(1.0);
+
+    std::vector<pcl::PointIndices> clusters;
+    reg.extract(clusters);
+
+    std::vector<PtCdPtr> cls;
+    for(auto &indices:clusters)
+    {
+        PtCdPtr cluster(new pcl::PointCloud<PointT>);
+        for(auto &indice:indices.indices)
+        {
+            cluster->points.push_back(cloud->points[indice]);
+        }
+        cls.push_back(cluster);
+
+    }
+
+//    pcl::PointCloud <pcl::PointXYZRGB>::Ptr colored_cloud = reg.getColoredCloud ();
+//    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("viewer2"));
+//    viewer->addPointCloud(colored_cloud);
+    std::sort(cls.begin(), cls.end(), [](PtCdPtr a, PtCdPtr b){return a->size()>b->size();});
+    return cls;
+
+}
+
+PtCdPtr ProcessPointClouds::EstimateBoundary(PtCdPtr cloud) {
+    pcl::PointCloud<pcl::Boundary> boundaries;
+    pcl::BoundaryEstimation<PointT, pcl::Normal, pcl::Boundary> boundEst;
+    pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
+    pcl::PointCloud<pcl::Normal>::Ptr normals = GetNormals(cloud);
+    boundEst.setInputCloud(cloud);
+    boundEst.setInputNormals(normals);
+    boundEst.setRadiusSearch(50);
+    boundEst.setAngleThreshold(M_PI/4);
+    boundEst.setSearchMethod(tree);
+    boundEst.compute(boundaries);
+
+    PtCdPtr out(new pcl::PointCloud<PointT>);
+    for(size_t i=0;i<cloud->points.size();i++)
+    {
+        if(boundaries[i].boundary_point>0)
+        {
+            out->push_back(cloud->points[i]);
+        }
+    }
+
+    return out;
+}
+
+PtCdPtr ProcessPointClouds::EstimateUpNet(PtCdPtr cloud) {
+    PtCdPtr out(new pcl::PointCloud<PointT>);
+    PointT minPt, maxPt;
+    pcl::getMinMax3D(*cloud, minPt, maxPt);
+    float s = 2;
+    std::vector<size_t> indexs;
+    for(float i=minPt.x;i<=maxPt.x;i+=s)
+    {
+        for(float j=minPt.y;j<=maxPt.y;j+=s)
+        {
+            float maxZ = 0;
+            size_t indexZ = 0;
+            for(size_t k=0;k<cloud->size();k++)
+            {
+                float x = cloud->points[k].x;
+                float y = cloud->points[k].y;
+                if(x>=i&&x<i+s&&y>=j&&y<j+s)
+                {
+                    float z = cloud->points[k].z;
+                    if(z>=maxZ)
+                    {
+                        maxZ = z;
+                        indexZ = k;
+                    }
+
+                }
+            }
+            indexs.push_back(indexZ);
+        }
+    }
+
+    for(auto & i:indexs)
+    {
+        out->points.push_back(cloud->points[i]);
+    }
+    return out;
 }
 
 

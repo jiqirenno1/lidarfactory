@@ -9,6 +9,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/region_growing.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
@@ -20,6 +21,8 @@
 #include <pcl/filters/fast_bilateral.h>
 #include <pcl/features/organized_edge_detection.h>
 #include <pcl/surface/mls.h>
+#include<pcl/visualization/pcl_visualizer.h>
+#include<pcl/features/boundary.h>
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT>::Ptr PtCdPtr;
 class ProcessPointClouds {
@@ -42,6 +45,9 @@ public:
     pcl::PolygonMesh CalConvexHull(PtCdPtr cloud);
     PtCdPtr BilateralFilter(PtCdPtr cloud);
     pcl::PointCloud<pcl::PointNormal> Smoothing(PtCdPtr cloud);
+    std::vector<PtCdPtr> RegionGrowing(PtCdPtr cloud);
+    PtCdPtr EstimateBoundary(PtCdPtr cloud);
+    PtCdPtr EstimateUpNet(PtCdPtr cloud);
 
 
 

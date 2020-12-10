@@ -24,10 +24,14 @@ include_directories(./STSservo)
 
 
 
+
+
+
+
 add_executable(visualize src/main1.cpp)
 target_link_libraries(visualize ${rs_driver_LIBRARIES} ${PCL_LIBRARIES} STSservo)
 
-add_executable(calib src/calibrate.cpp)
+add_executable(calib src/calibrate.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
 target_link_libraries(calib ${PCL_LIBRARIES})
 
 add_executable(test src/test.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
@@ -38,3 +42,12 @@ target_link_libraries(testSTS STSservo)
 
 add_executable(crush src/crush.cpp)
 target_link_libraries(crush ${OpenCV_LIBRARIES})
+
+
+add_executable(crush3D src/crush3D.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
+target_link_libraries(crush3D ${PCL_LIBRARIES})
+
+add_executable(edge edge.cpp)
+target_link_libraries(edge ${PCL_LIBRARIES})
+
+

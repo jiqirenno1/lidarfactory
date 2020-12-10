@@ -52,7 +52,7 @@ int main()
     std::vector<cv::Point> ps;
     std::string text1="";
     int i= 1000;
-    while(i--)
+    while(1)
     {
         ps.clear();
         cv::Mat im = cv::Mat(600,600, CV_8UC3, cv::Scalar(0,0,0));
