@@ -13,23 +13,6 @@ SMSCL sm;
 
 robosense::lidar::Queue<std::pair<robosense::lidar::PointCloudMsg<pcl::PointXYZ>, int>> msg_queue;
 
-//void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event, void* cloud_void)
-//{
-//
-//    pcl::PointCloud<pcl::PointXYZ> *cloud = static_cast<pcl::PointCloud<pcl::PointXYZ>*>(cloud_void);
-//    if(event.getKeySym()=="s"&& event.keyDown())
-//    {
-//        if(1)
-//        {
-//            std::cout<<"** size: "<<cloud->size()<<"  **width*height: "<<cloud->width*cloud->height<<std::endl;
-//            std::cout<<"save PCD!"<<std::endl;
-//            pcl::io::savePCDFile ("/home/ubuntu/lidar/configuration_data/s_pcd_pcl.pcd", *cloud);
-//        }
-//
-//    }
-//
-//
-//}
 
 int getPos()
 {
@@ -169,7 +152,7 @@ int main(int argc, char* argv[])
     LidarDriver<pcl::PointXYZ> driver;  ///< Declare the driver object
 
     RSDriverParam param;                  ///< Create a parameter object
-    param.input_param.device_ip = "192.168.1.200";
+    param.input_param.device_ip = "192.168.1.201";
     param.input_param.msop_port = 6699;   ///< Set the lidar msop port number, the default is 6699
     param.input_param.difop_port = 7788;  ///< Set the lidar difop port number, the default is 7788
     param.lidar_type = LidarType::RS16;   ///< Set the lidar type. Make sure this type is correct

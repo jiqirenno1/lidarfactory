@@ -1,19 +1,25 @@
 cmake_minimum_required(VERSION 3.17)
 project(LidarFactory)
 
-
-#find_package(PCL REQUIRED PATHS "/home/ubuntu/Downloads/software/pcl/build1")
-find_package(PCL REQUIRED)
-#include_directories( "/usr/local/include/pcl-1.11" )
-#link_directories("/usr/lib/x86_64-linux-gnu/libpcl_common.so" "/usr/lib/x86_64-linux-gnu/libpcl_io.so")
+set(CMAKE_CXX_STANDARD 14)
+find_package(PCL REQUIRED PATHS "/home/ubuntu/Downloads/software/pcl/install")
+#find_package(PCL REQUIRED)
+#include_directories( "/home/ubuntu/Downloads/software/pcl/install/include/pcl-1.11/" )
+#link_directories("/home/ubuntu/Downloads/software/pcl/install/lib")
+#add_definitions(${PCL_DEFINITIONS})
 
 find_package(OpenCV REQUIRED)
 
 # embedding rs_driver
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/rs_driver/cmake)
-include(rs_driver)
-include_directories(${rs_driver_INCLUDE_DIRS})
+#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/rs_driver/cmake)
+#include(rs_driver)
+#include_directories(${rs_driver_INCLUDE_DIRS})
 ##
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/rs_driver)
+find_package(rs_driver REQUIRED)
+include_directories(${rs_driver_INCLUDE_DIRS})
+
 
 ## embedding STSservo
 file(GLOB hdrs STSservo/*.h)
@@ -22,23 +28,29 @@ file(GLOB srs STSservo/*.cpp)
 add_library(STSservo ${hdrs} ${srs})
 include_directories(./STSservo)
 
-
-
+#file(GLOB libpcl /home/ubuntu/Downloads/software/pcl/install/lib/libpcl*)
+#message(${PCL_LIBRARIES})
+#list(APPEND PCL_LIBRARIES ${libpcl})
+#message(${PCL_LIBRARIES})
+#message(${libpcl})
 
 
 
 
 add_executable(visualize src/main1.cpp)
-target_link_libraries(visualize ${rs_driver_LIBRARIES} ${PCL_LIBRARIES} STSservo)
+target_link_libraries(visualize ${rs_driver_LIBRARIES} ${PCL_LIBRARIES} STSservo -lpthread)
+
+add_executable(four src/four.cpp)
+target_link_libraries(four ${rs_driver_LIBRARIES} ${PCL_LIBRARIES} STSservo -lpthread)
 
 add_executable(calib src/calibrate.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
 target_link_libraries(calib ${PCL_LIBRARIES})
 
 add_executable(test src/test.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
-target_link_libraries(test ${PCL_LIBRARIES})
+target_link_libraries(test ${PCL_LIBRARIES} -lpthread)
 
 add_executable(testSTS src/testSTS.cpp)
-target_link_libraries(testSTS STSservo)
+target_link_libraries(testSTS STSservo -lpthread)
 
 add_executable(crush src/crush.cpp)
 target_link_libraries(crush ${OpenCV_LIBRARIES})
