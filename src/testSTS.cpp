@@ -37,14 +37,14 @@ int main(int argc, char **argv)
         std::cout<< "Failed to init smscl motor!"<<std::endl;
         return 0;
     }
-    sm.unLockEprom(1);//打开EPROM保存功能
-    std::cout<< "unLock Eprom"<<std::endl;
-    sm.writeByte(1, SMSCL_COMPLIANCE_P, 8);//ID
-    sm.writeByte(1, SMSCL_COMPLIANCE_I, 0);
-    sm.writeByte(1, SMSCL_COMPLIANCE_D, 8);
-
-
-    sm.LockEprom(2);////关闭EPROM保存功能
+//    sm.unLockEprom(1);//打开EPROM保存功能
+//    std::cout<< "unLock Eprom"<<std::endl;
+//    sm.writeByte(1, SMSCL_COMPLIANCE_P, 8);//ID
+//    sm.writeByte(1, SMSCL_COMPLIANCE_I, 0);
+//    sm.writeByte(1, SMSCL_COMPLIANCE_D, 8);
+//
+//
+//    sm.LockEprom(2);////关闭EPROM保存功能
 //    sm.CalibrationOfs(1);
     sm.FeedBack(1);
 //    while(1){

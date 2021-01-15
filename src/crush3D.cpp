@@ -119,7 +119,7 @@ void keyboardEventOccurred(const pcl::visualization::KeyboardEvent &event, void*
 
     }
 }
-int main()
+int maincrush()
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud0(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr line(new pcl::PointCloud<pcl::PointXYZ>);
@@ -221,4 +221,14 @@ int main()
 //    viewer->addPolygonMesh(mesh);
     viewer->spin();
 
+}
+
+int main()
+{
+    std::string file0 = "/home/ubuntu/lidar/1/1.pcd";
+    PtCdPtr cloud1(new pcl::PointCloud<PointT>);
+    pcl::io::loadPCDFile(file0, *cloud1);
+    std::cout<<"size: "<<cloud1->size()<<std::endl;
+    viewer->addPointCloud(cloud1, "save");
+    viewer->spin();
 }

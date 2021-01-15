@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     sm.WritePosEx(1, 2048, 1000, 10);
     usleep(2270*1000);
     sm.FeedBack(1);
-    std::cout<< " init pos ="<<sm.ReadPos(-1)<<std::endl;
+    std::cout<< " init pos ="<<sm.ReadPos(1)<<std::endl;
     std::thread t(run);
 
     RS_TITLE << "------------------------------------------------------" << RS_REND;

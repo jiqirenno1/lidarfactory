@@ -119,6 +119,7 @@ int mainmy()
       viewer->spin();
 
 }
+//
 int main()
 {
     viewer->setFullScreen(false);

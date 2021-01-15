@@ -34,7 +34,10 @@ include_directories(./STSservo)
 #message(${PCL_LIBRARIES})
 #message(${libpcl})
 
-
+find_package(OpenMP REQUIRED)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
 
 add_executable(visualize src/main1.cpp)
@@ -61,5 +64,8 @@ target_link_libraries(crush3D ${PCL_LIBRARIES})
 
 add_executable(edge edge.cpp)
 target_link_libraries(edge ${PCL_LIBRARIES})
+
+add_executable(tsdf src/testTSDF.cpp src/sdf/sdf.cpp src/sdf/marching_cubes_sdf.cpp)
+target_link_libraries(tsdf ${PCL_LIBRARIES})
 
 

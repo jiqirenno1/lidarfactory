@@ -27,11 +27,11 @@ int getPos()
 void run()
 {
     s16 pos0 = 2048;
-    s16 step = 20;
+    s16 step = 30;
     while(1) {
 
         s16 pos1 = pos0 + step;
-        if (pos1 >= 2248 || pos1 <= 2048)
+        if (pos1 >= 2248 || pos1 <= 1848)
         {
             step = -step;
         }
@@ -81,7 +81,7 @@ void show(pcl::visualization::PCLVisualizer::Ptr &viewer)
         if(point_cloud->header.seq%1==0)
         {
             std::cout<<"save PCD!"<<std::endl;
-            pcl::io::savePCDFile ("/home/ubuntu/lidar/poshe1/6pos"+ std::to_string(pos)+".pcd", *point_cloud);
+            //pcl::io::savePCDFile ("/home/ubuntu/lidar/poshe1/6pos"+ std::to_string(pos)+".pcd", *point_cloud);
         }
         viewer->removeAllPointClouds();
         viewer->removeAllShapes();
