@@ -68,7 +68,7 @@ int main()
     float width = 50;
     float height = 50;
     float depth = 50;
-    int m= 500;
+    int m= 200;
 
     Eigen::Vector3f origin(0.0, -25.0, -15.0);
     sdf graph;
@@ -110,8 +110,8 @@ int main()
     cloudout = graph.get_result();
     std::cout<<cloudout->size()<<std::endl;
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("sdf viewer!"));
-
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> b(cloudout, 0, 0, 255);
+    pcl::io::savePCDFile("/home/ubuntu/lidar/tsdf.pcd", *cloudout);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> b(cloudout, 255, 0, 0);
     viewer->addPointCloud(cloudout, b, "tsdf");
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> r(cloud, 0, 255, 0);
     viewer->addPointCloud(cloud, r, "init");

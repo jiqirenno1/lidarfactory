@@ -31,15 +31,19 @@ PtCdPtr ProcessPointClouds::CropCloud(PtCdPtr cloud, Eigen::Vector4f minPoint, E
 PtCdPtr ProcessPointClouds::CropCloudZ(PtCdPtr cloud, float minZ, float maxZ) {
     PtCdPtr outCloud(new pcl::PointCloud<PointT>);
     size_t nums = cloud->size();
+    int j=0;
     for(size_t i=0;i<nums;i++)
     {
-        float z=cloud->points[i].z;
+        float z=cloud->points[i].x;
         if(z>=minZ&&z<=maxZ)
         {
             outCloud->points.push_back(cloud->points[i]);
+            j++;
         }
 
     }
+    outCloud->height = 1;
+    outCloud->width = j;
     return outCloud;
 }
 
@@ -396,13 +400,13 @@ PtCdPtr ProcessPointClouds::EstimateUpNet(PtCdPtr cloud) {
     PtCdPtr out(new pcl::PointCloud<PointT>);
     PointT minPt, maxPt;
     pcl::getMinMax3D(*cloud, minPt, maxPt);
-    float s = 2;
+    float s = 0.1;
     std::vector<size_t> indexs;
     for(float i=minPt.x;i<=maxPt.x;i+=s)
     {
         for(float j=minPt.y;j<=maxPt.y;j+=s)
         {
-            float maxZ = 0;
+            float maxZ = -100;
             size_t indexZ = 0;
             for(size_t k=0;k<cloud->size();k++)
             {
@@ -419,7 +423,10 @@ PtCdPtr ProcessPointClouds::EstimateUpNet(PtCdPtr cloud) {
 
                 }
             }
-            indexs.push_back(indexZ);
+            if(indexZ!=0)
+            {
+                indexs.push_back(indexZ);
+            }
         }
     }
 
