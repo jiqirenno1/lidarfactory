@@ -263,10 +263,10 @@ int main(int argc, char** argv)
 //    viewer->addPointCloud(cloud_filtered, "dowm");
     std::cout << "filter points number: " << cloud_filtered->points.size() << std::endl;
 
-    cloud_part = ppc->EstimateUpNet(cloud_filtered);
-    cloud_filtered = cloud_part;
+//    cloud_part = ppc->EstimateUpNet(cloud_filtered);
+//    cloud_filtered = cloud_part;
     std::cout << "filter points number: " << cloud_filtered->points.size() << std::endl;
-    viewer->addPointCloud(cloud_filtered, "dowm");
+    //viewer->addPointCloud(cloud_filtered, "dowm");
 
     // 3.对点云重采样,进行平滑
     pcl::search::KdTree<PointT>::Ptr treeSampling(new pcl::search::KdTree<PointT>); // 创建用于最近邻搜索的KD-Tree
@@ -278,7 +278,7 @@ int main(int argc, char** argv)
     mls.setSearchMethod(treeSampling);				// 设置KD-Tree作为搜索方法
     mls.setSearchRadius(2.5);						// 单位m.设置用于拟合的K近邻半径
     mls.process(*cloud_smoothed);					// 输出
-    pcl::io::savePCDFile ("/home/ubuntu/lidar/pp-m.pcd", *cloud_smoothed);
+    //pcl::io::savePCDFile ("/home/ubuntu/lidar/pp-m.pcd", *cloud_smoothed);
 //    std::cout<<mls.getMLSResults().size()<<std::endl;
 //    /**< \brief The polynomial coefficients Example: z = c_vec[0] + c_vec[1]*v + c_vec[2]*v^2 + c_vec[3]*u + c_vec[4]*u*v + c_vec[5]*u^2 */
 //    std::cout<<cloud_smoothed->points[0]<<std::endl;
@@ -294,7 +294,68 @@ int main(int argc, char** argv)
     std::cout << "smooth points number: " << cloud_smoothed->points.size() << std::endl;
     pcl::visualization::PointCloudColorHandlerCustom<PointT> r(cloud_smoothed, 0, 255, 0);
     viewer->addPointCloud(cloud_smoothed, r, "dowmsam");
-    viewer->spinOnce();
+
+    PointT point;
+    std::vector<pcl::PointCloud<PointT>> N_scans(16);
+    for(int i=0;i<cloud_smoothed->size();i++)
+    {
+        point.x = cloud_smoothed->points[i].x;
+        point.y = cloud_smoothed->points[i].y;
+        point.z = cloud_smoothed->points[i].z;
+
+        double angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        cout<<"angle: "<<angle<<endl;
+        int scanID = int((angle + 15) / 2 + 0.5);
+        cout<<"id: "<<scanID<<endl;
+        if(scanID>=0&&scanID<=15&&N_scans[scanID].size()<10)
+            N_scans[scanID].push_back(point);
+
+    }
+//    for(auto &e:N_scans[8])
+//    {
+//        cout<<e.z<<endl;
+//    }
+    pcl::PointCloud<PointT>::Ptr line(new pcl::PointCloud<PointT>());
+    *line = N_scans[4];
+//    pcl::visualization::PointCloudColorHandlerCustom<PointT> rrrr(N_scans[8], 0, 255, 255);
+//    viewer->addPointCloud(line, "line");
+
+    PointT minPt, maxPt;
+    pcl::getMinMax3D(*cloud_smoothed, minPt, maxPt);
+
+    cout<<minPt.x<<" "<<minPt.y<<" "<<minPt.z<<endl;
+    cout<<maxPt.x<<" "<<maxPt.y<<" "<<maxPt.z<<endl;
+
+    double s = 0.7;
+    PtCdPtr out(new pcl::PointCloud<PointT>);
+    for(double j=minPt.y;j<maxPt.y;j+=s)
+    {
+        double value = -1000;
+        int index = -1;
+        for(int i=0;i<cloud_smoothed->size();i++)
+        {
+            double x = cloud_smoothed->points[i].x;
+            double y = cloud_smoothed->points[i].y;
+            double z = cloud_smoothed->points[i].z;
+            if(y<j+s&&y>j)
+            {
+                if((z-0.1*x)>value)
+                {
+                    value = z-0.1*x;
+                    index = i;
+                }
+            }
+
+        }
+        if(index!=-1)
+        {
+            out->push_back(cloud_smoothed->points[index]);
+        }
+
+    }
+    cout<<out->size()<<endl;
+    viewer->addPointCloud(out, "line");
+
 
     // 4.法线估计
     pcl::NormalEstimation<PointT, pcl::Normal> normalEstimation;                    // 创建法线估计的对象
@@ -309,6 +370,15 @@ int main(int argc, char** argv)
 
     normalEstimation.compute(*normals); 				// 计算法线
 
+//    viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal> (cloud_smoothed, normals, 3, 1, "normals");
+
+//    std::vector<PtCdPtr> cls = ppc->RegionGrowing(cloud_smoothed);
+//    cout<<"size:"<<cls.size()<<endl;
+//    viewer->addPointCloud(cls[2], "part0");
+//    pcl::PointCloud<PointT>::Ptr pline(new pcl::PointCloud<PointT>);
+//    pline = ppc->EstimateBoundary(cloud_smoothed);
+//    viewer->addPointCloud(pline, "boundry");
+/*
     // 5.将点云位姿、颜色、法线信息连接到一起
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointNormal>);
     pcl::concatenateFields(*cloud_smoothed, *normals, *cloud_with_normals);
@@ -337,11 +407,11 @@ int main(int argc, char** argv)
     gp3.setInputCloud(cloud_with_normals);  // 设置输入点云为有向点云
     gp3.setSearchMethod(tree2);				// 设置搜索方式
     gp3.reconstruct(triangles);				// 重建提取三角化
-
+*/
     // 7.显示网格化结果
 
     //viewer->setBackgroundColor(0, 0, 0);  		// 设置背景
-//    viewer->addPolygonMesh(triangles, "mesh");  // 网格化点云添加到视窗
+   // viewer->addPolygonMesh(triangles, "mesh");  // 网格化点云添加到视窗
     viewer->spin();
 
 //    while (!viewer->wasStopped())
