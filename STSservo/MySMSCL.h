@@ -15,6 +15,7 @@ public:
     void init(std::string& port, int baudRate);
     void start();
     int getPos();
+    void stop();
 private:
     SMSCL sm_;
 

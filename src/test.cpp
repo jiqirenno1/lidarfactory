@@ -231,13 +231,17 @@ int main(int argc, char** argv)
     pcl::PointCloud<PointT>::Ptr cloud_downSampled(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_filtered(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_smoothed(new pcl::PointCloud<PointT>);
-    if (pcl::io::loadPCDFile("/home/ubuntu/lidar/pp-p1.pcd", *cloud) == -1)
+    if (pcl::io::loadPCDFile("/home/ubuntu/lidar/2/combine.pcd", *cloud) == -1)
     {
         cout << "could not load the ile..." << endl;
     }
 
     pcl::PointCloud<PointT>::Ptr cloud_part(new pcl::PointCloud<PointT>);
     ProcessPointClouds *ppc = new ProcessPointClouds();
+    Eigen::Vector4f minPoint(10,-100,-10, 0);
+    Eigen::Vector4f maxPoint(100,90, 3, 0);
+    cloud_part = ppc->CropCloud(cloud, minPoint, maxPoint);
+    cloud = cloud_part;
 //    cloud_part = ppc->CropCloudZ(cloud, 5, 60);
 //    pcl::io::savePCDFile ("/home/ubuntu/lidar/pp-p1.pcd", *cloud_part);
 
@@ -249,7 +253,7 @@ int main(int argc, char** argv)
     // 1.下采样，同时保持点云形状特征
     pcl::VoxelGrid<PointT> downSampled;				// 下采样对象
     downSampled.setInputCloud(cloud);
-    downSampled.setLeafSize(0.6f, 0.6f, 0.6f);	// 栅格叶的尺寸
+    downSampled.setLeafSize(1.6f, 1.6f, 1.6f);	// 栅格叶的尺寸
     downSampled.filter(*cloud_downSampled);
     std::cout << "downsample points number: " << cloud_downSampled->points.size() << std::endl;
 //    cloud_downSampled = cloud;
@@ -304,9 +308,9 @@ int main(int argc, char** argv)
         point.z = cloud_smoothed->points[i].z;
 
         double angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
-        cout<<"angle: "<<angle<<endl;
+        //cout<<"angle: "<<angle<<endl;
         int scanID = int((angle + 15) / 2 + 0.5);
-        cout<<"id: "<<scanID<<endl;
+        //cout<<"id: "<<scanID<<endl;
         if(scanID>=0&&scanID<=15&&N_scans[scanID].size()<10)
             N_scans[scanID].push_back(point);
 
@@ -320,41 +324,11 @@ int main(int argc, char** argv)
 //    pcl::visualization::PointCloudColorHandlerCustom<PointT> rrrr(N_scans[8], 0, 255, 255);
 //    viewer->addPointCloud(line, "line");
 
-    PointT minPt, maxPt;
-    pcl::getMinMax3D(*cloud_smoothed, minPt, maxPt);
-
-    cout<<minPt.x<<" "<<minPt.y<<" "<<minPt.z<<endl;
-    cout<<maxPt.x<<" "<<maxPt.y<<" "<<maxPt.z<<endl;
-
-    double s = 0.7;
     PtCdPtr out(new pcl::PointCloud<PointT>);
-    for(double j=minPt.y;j<maxPt.y;j+=s)
-    {
-        double value = -1000;
-        int index = -1;
-        for(int i=0;i<cloud_smoothed->size();i++)
-        {
-            double x = cloud_smoothed->points[i].x;
-            double y = cloud_smoothed->points[i].y;
-            double z = cloud_smoothed->points[i].z;
-            if(y<j+s&&y>j)
-            {
-                if((z-0.1*x)>value)
-                {
-                    value = z-0.1*x;
-                    index = i;
-                }
-            }
-
-        }
-        if(index!=-1)
-        {
-            out->push_back(cloud_smoothed->points[index]);
-        }
-
-    }
+    out = ppc->GetEdge(cloud_smoothed);
     cout<<out->size()<<endl;
-    viewer->addPointCloud(out, "line");
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> rr(out, 255, 0, 0);
+    viewer->addPointCloud(out, rr, "line");
 
 
     // 4.法线估计

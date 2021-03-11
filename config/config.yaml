@@ -16,6 +16,6 @@ lidar:
       baudrate: 115200
       nums: 2
       id: 1
-      dir: /home/ubuntu/lidar/1/
+      dir: /home/ubuntu/lidar/2/
 
 

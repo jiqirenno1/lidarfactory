@@ -23,6 +23,7 @@
 #include <pcl/surface/mls.h>
 #include<pcl/visualization/pcl_visualizer.h>
 #include<pcl/features/boundary.h>
+#include<opencv2/opencv.hpp>
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT>::Ptr PtCdPtr;
 class ProcessPointClouds {
@@ -48,6 +49,11 @@ public:
     std::vector<PtCdPtr> RegionGrowing(PtCdPtr cloud);
     PtCdPtr EstimateBoundary(PtCdPtr cloud);
     PtCdPtr EstimateUpNet(PtCdPtr cloud);
+    PtCdPtr GetEdge(PtCdPtr cloud);
+    std::vector<float> GetFov(PtCdPtr cloud);
+    void Cloud2Mat(PtCdPtr cloud, cv::Mat& img, float pitch_precision, float yaw_precision, float xoffset, float yoffset,float xlen, float ylen);
+    void Mat2Cloud(cv::Mat& img, float pitch_precision, float yaw_precision,  float xoffset, float yoffset, PtCdPtr cloud);
+
 
 
 

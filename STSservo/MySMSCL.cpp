@@ -17,7 +17,7 @@ void MySMSCL::init(std::string &port, int baudRate) {
 
 void MySMSCL::start() {
     s16 pos0 = 2048;
-    s16 step = 30;
+    s16 step = 200;
     std::cout<< " start motor! "<<std::endl;
     while(1) {
 
@@ -27,8 +27,8 @@ void MySMSCL::start() {
             step = -step;
         }
 
-        sm_.WritePosEx(1, pos1, 200, 3);
-        usleep(1000*1000);
+        sm_.WritePosEx(1, pos1, 25, 5);
+        usleep(8200*1000);//[(P1-P0)/V]*1000+(V/A)*10
         pos0=pos1;
     }
 
@@ -46,4 +46,10 @@ int MySMSCL::getPos() {
 
 MySMSCL::~MySMSCL() {
 
+}
+
+void MySMSCL::stop() {
+    sm_.WritePosEx(1, 2048, 1000, 10);
+    usleep(2270*1000);
+    sm_.end();
 }
