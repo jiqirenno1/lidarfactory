@@ -231,13 +231,17 @@ int main(int argc, char** argv)
     pcl::PointCloud<PointT>::Ptr cloud_downSampled(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_filtered(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_smoothed(new pcl::PointCloud<PointT>);
-    if (pcl::io::loadPCDFile("/home/ubuntu/lidar/pp-p1.pcd", *cloud) == -1)
+    if (pcl::io::loadPCDFile("/home/ubuntu/lidar/2/combine.pcd", *cloud) == -1)
     {
         cout << "could not load the ile..." << endl;
     }
 
     pcl::PointCloud<PointT>::Ptr cloud_part(new pcl::PointCloud<PointT>);
     ProcessPointClouds *ppc = new ProcessPointClouds();
+    Eigen::Vector4f minPoint(10,-100,-10, 0);
+    Eigen::Vector4f maxPoint(100,90, 3, 0);
+    cloud_part = ppc->CropCloud(cloud, minPoint, maxPoint);
+    cloud = cloud_part;
 //    cloud_part = ppc->CropCloudZ(cloud, 5, 60);
 //    pcl::io::savePCDFile ("/home/ubuntu/lidar/pp-p1.pcd", *cloud_part);
 
@@ -249,7 +253,7 @@ int main(int argc, char** argv)
     // 1.下采样，同时保持点云形状特征
     pcl::VoxelGrid<PointT> downSampled;				// 下采样对象
     downSampled.setInputCloud(cloud);
-    downSampled.setLeafSize(0.6f, 0.6f, 0.6f);	// 栅格叶的尺寸
+    downSampled.setLeafSize(1.6f, 1.6f, 1.6f);	// 栅格叶的尺寸
     downSampled.filter(*cloud_downSampled);
     std::cout << "downsample points number: " << cloud_downSampled->points.size() << std::endl;
 //    cloud_downSampled = cloud;
@@ -263,10 +267,10 @@ int main(int argc, char** argv)
 //    viewer->addPointCloud(cloud_filtered, "dowm");
     std::cout << "filter points number: " << cloud_filtered->points.size() << std::endl;
 
-    cloud_part = ppc->EstimateUpNet(cloud_filtered);
-    cloud_filtered = cloud_part;
+//    cloud_part = ppc->EstimateUpNet(cloud_filtered);
+//    cloud_filtered = cloud_part;
     std::cout << "filter points number: " << cloud_filtered->points.size() << std::endl;
-    viewer->addPointCloud(cloud_filtered, "dowm");
+    //viewer->addPointCloud(cloud_filtered, "dowm");
 
     // 3.对点云重采样,进行平滑
     pcl::search::KdTree<PointT>::Ptr treeSampling(new pcl::search::KdTree<PointT>); // 创建用于最近邻搜索的KD-Tree
@@ -278,7 +282,7 @@ int main(int argc, char** argv)
     mls.setSearchMethod(treeSampling);				// 设置KD-Tree作为搜索方法
     mls.setSearchRadius(2.5);						// 单位m.设置用于拟合的K近邻半径
     mls.process(*cloud_smoothed);					// 输出
-    pcl::io::savePCDFile ("/home/ubuntu/lidar/pp-m.pcd", *cloud_smoothed);
+    //pcl::io::savePCDFile ("/home/ubuntu/lidar/pp-m.pcd", *cloud_smoothed);
 //    std::cout<<mls.getMLSResults().size()<<std::endl;
 //    /**< \brief The polynomial coefficients Example: z = c_vec[0] + c_vec[1]*v + c_vec[2]*v^2 + c_vec[3]*u + c_vec[4]*u*v + c_vec[5]*u^2 */
 //    std::cout<<cloud_smoothed->points[0]<<std::endl;
@@ -294,7 +298,38 @@ int main(int argc, char** argv)
     std::cout << "smooth points number: " << cloud_smoothed->points.size() << std::endl;
     pcl::visualization::PointCloudColorHandlerCustom<PointT> r(cloud_smoothed, 0, 255, 0);
     viewer->addPointCloud(cloud_smoothed, r, "dowmsam");
-    viewer->spinOnce();
+
+    PointT point;
+    std::vector<pcl::PointCloud<PointT>> N_scans(16);
+    for(int i=0;i<cloud_smoothed->size();i++)
+    {
+        point.x = cloud_smoothed->points[i].x;
+        point.y = cloud_smoothed->points[i].y;
+        point.z = cloud_smoothed->points[i].z;
+
+        double angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
+        //cout<<"angle: "<<angle<<endl;
+        int scanID = int((angle + 15) / 2 + 0.5);
+        //cout<<"id: "<<scanID<<endl;
+        if(scanID>=0&&scanID<=15&&N_scans[scanID].size()<10)
+            N_scans[scanID].push_back(point);
+
+    }
+//    for(auto &e:N_scans[8])
+//    {
+//        cout<<e.z<<endl;
+//    }
+    pcl::PointCloud<PointT>::Ptr line(new pcl::PointCloud<PointT>());
+    *line = N_scans[4];
+//    pcl::visualization::PointCloudColorHandlerCustom<PointT> rrrr(N_scans[8], 0, 255, 255);
+//    viewer->addPointCloud(line, "line");
+
+    PtCdPtr out(new pcl::PointCloud<PointT>);
+    out = ppc->GetEdge(cloud_smoothed);
+    cout<<out->size()<<endl;
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> rr(out, 255, 0, 0);
+    viewer->addPointCloud(out, rr, "line");
+
 
     // 4.法线估计
     pcl::NormalEstimation<PointT, pcl::Normal> normalEstimation;                    // 创建法线估计的对象
@@ -309,6 +344,15 @@ int main(int argc, char** argv)
 
     normalEstimation.compute(*normals); 				// 计算法线
 
+//    viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal> (cloud_smoothed, normals, 3, 1, "normals");
+
+//    std::vector<PtCdPtr> cls = ppc->RegionGrowing(cloud_smoothed);
+//    cout<<"size:"<<cls.size()<<endl;
+//    viewer->addPointCloud(cls[2], "part0");
+//    pcl::PointCloud<PointT>::Ptr pline(new pcl::PointCloud<PointT>);
+//    pline = ppc->EstimateBoundary(cloud_smoothed);
+//    viewer->addPointCloud(pline, "boundry");
+/*
     // 5.将点云位姿、颜色、法线信息连接到一起
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointNormal>);
     pcl::concatenateFields(*cloud_smoothed, *normals, *cloud_with_normals);
@@ -337,11 +381,11 @@ int main(int argc, char** argv)
     gp3.setInputCloud(cloud_with_normals);  // 设置输入点云为有向点云
     gp3.setSearchMethod(tree2);				// 设置搜索方式
     gp3.reconstruct(triangles);				// 重建提取三角化
-
+*/
     // 7.显示网格化结果
 
     //viewer->setBackgroundColor(0, 0, 0);  		// 设置背景
-//    viewer->addPolygonMesh(triangles, "mesh");  // 网格化点云添加到视窗
+   // viewer->addPolygonMesh(triangles, "mesh");  // 网格化点云添加到视窗
     viewer->spin();
 
 //    while (!viewer->wasStopped())

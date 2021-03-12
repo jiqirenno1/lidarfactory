@@ -313,6 +313,17 @@ pcl::PointCloud<pcl::PointNormal> ProcessPointClouds::Smoothing(PtCdPtr cloud) {
 
     mls.process(mls_points);
     return mls_points;
+
+    // 3.对点云重采样,进行平滑
+//    pcl::search::KdTree<PointT>::Ptr treeSampling(new pcl::search::KdTree<PointT>); // 创建用于最近邻搜索的KD-Tree
+//    pcl::MovingLeastSquares<PointT, PointT> mls;	// 定义最小二乘实现的对象mls
+//    mls.setComputeNormals(false);					// 设置在最小二乘计算中是否需要存储计算的法线
+//    mls.setInputCloud(cloud_filtered);				// 设置待处理点云
+//    mls.setPolynomialOrder(2);						// 拟合2阶多项式拟合
+//    //mls.setPolynomialFit(false);					// 设置为false可以 加速 smooth
+//    mls.setSearchMethod(treeSampling);				// 设置KD-Tree作为搜索方法
+//    mls.setSearchRadius(2.5);						// 单位m.设置用于拟合的K近邻半径
+//    mls.process(*cloud_smoothed);					// 输出
 }
 
 PtCdPtr ProcessPointClouds::PassThrough(PtCdPtr cloud, std::string axis, float min, float max) {
@@ -435,6 +446,118 @@ PtCdPtr ProcessPointClouds::EstimateUpNet(PtCdPtr cloud) {
         out->points.push_back(cloud->points[i]);
     }
     return out;
+}
+
+PtCdPtr ProcessPointClouds::GetEdge(PtCdPtr cloud) {
+    PtCdPtr line(new pcl::PointCloud<PointT>);
+    PointT minPt, maxPt;
+    pcl::getMinMax3D(*cloud, minPt, maxPt);
+    float rangeX = maxPt.x - minPt.y;
+    float rangeZ = maxPt.z - minPt.z;
+    float s = 1.0; //y-axis step
+    for(float j=minPt.y;j<=maxPt.y;j+=s)
+    {
+        float val = -1000;
+        int index = -1;
+        for(int i=0;i<cloud->size();i++)
+        {
+            float x = cloud->points[i].x;
+            float y = cloud->points[i].y;
+            float z = cloud->points[i].z;
+            if(y>j&&(y<j+s))
+            {
+                float loss = z/rangeZ - x/rangeX; // max loss function
+                if(loss>val)
+                {
+                    val = loss;
+                    index = i;
+                }
+            }
+        }
+        if(index != -1)
+        {
+            line->push_back(cloud->points[index]);
+        }
+
+    }
+    return line;
+}
+
+std::vector<float> ProcessPointClouds::GetFov(PtCdPtr cloud) {
+    std::vector<float> out(4);
+    int nums = cloud->size();
+    float minx=100, miny=100, maxx=-100, maxy=-100;
+    for(int i=0;i<nums;i++)
+    {
+        float x = cloud->points[i].x;
+        float y = cloud->points[i].y;
+        float z = cloud->points[i].z;
+        float dist = sqrt(x*x + y*y);
+        float radius = sqrt(x*x + y*y + z*z);
+        float pitch = atan2(y, x) * 180.0f  / M_PI;
+        float yaw = atan2(z, dist) * 180.0f / M_PI;
+        if(pitch>maxx)
+            maxx = pitch;
+        if(pitch<minx)
+            minx = pitch;
+        if(yaw>maxy)
+            maxy = yaw;
+        if(yaw<miny)
+            miny = yaw;
+    }
+
+    out[0] = minx, out[1]=miny, out[2] = maxx-minx+1, out[3] = maxy- miny+1;
+    return out;
+}
+
+void ProcessPointClouds::Cloud2Mat(PtCdPtr cloud, cv::Mat &img, float pitch_precision, float yaw_precision, float xoffset,
+                              float yoffset, float xlen, float ylen) {
+    img = cv::Mat::zeros(int(ylen/yaw_precision), int(xlen/pitch_precision), CV_8UC1);
+    float x, y, z;
+
+    for (auto point : cloud->points) {
+        x = point.x;
+        y = point.y;
+        z = point.z;
+
+        /* calculate some parameters for spherical coord */
+        float dist = sqrt(x*x + y*y);
+        float radius = sqrt(x*x + y*y + z*z);
+        float pitch = atan2(y, x) * 180.0f / pitch_precision / M_PI;
+        float yaw = atan2(z, dist) * 180.0f / yaw_precision / M_PI;
+
+        float row_offset = yoffset/yaw_precision;
+        float col_offset = xoffset/pitch_precision;
+
+        int col = std::min(img.cols-1, std::max(0, (int)(pitch-col_offset)));
+        int row = std::min(img.rows-1, std::max(0, (int)(yaw-row_offset)));
+
+        img.at<uchar>(row, col) = int(round(radius)); //float2int
+    }
+}
+
+void ProcessPointClouds::Mat2Cloud(cv::Mat &img, float pitch_precision, float yaw_precision, float xoffset, float yoffset,
+                              pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+    for (int row = 0; row < img.rows; row++) {
+        for (int col = 0; col < img.cols; col++) {
+            float radius = static_cast<float>(img.at<uchar>(row, col));
+
+            if (radius <= 0.0) continue;
+            //cout<<"afer: "<<radius<<endl;
+
+            float pitch = (col + 0.5) * pitch_precision + xoffset;
+            float yaw = (row + 0.5) * yaw_precision + yoffset;
+            // std::cout << yaw << std::endl;
+
+            float z = radius*sin(yaw * M_PI / 180.0f);
+            float dist = radius*cos(yaw * M_PI / 180.0f);
+            float y = dist*sin(pitch * M_PI / 180.0f);
+            float x = dist*cos(pitch * M_PI / 180.0f);
+
+            cloud->push_back(pcl::PointXYZ(x, y, z));
+        }
+    }
+
 }
 
 
