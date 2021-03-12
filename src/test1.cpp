@@ -7,10 +7,24 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <opencv2/opencv.hpp>
 #include "ProcessPointClouds.h"
+#include "utils/pistache.h"
 
 using namespace std;
 
 int main()
+{
+    pistache *client = new pistache();
+    string im1 = "/home/ubuntu/CLionProjects/LiDAR-Point-Cloud-Compression/build/out.png";
+   string im = "/home/ubuntu/lidar/out0.001.png";
+    string page = "http://localhost:9080/my";
+    float detaX = 0.2;
+    float detaY = 0.3;
+    float minX = 8;
+    float minY = 10;
+    client->pistacheSend(im, page, detaX, detaY, minX, minY);
+}
+//test cloud2mat
+int main1()
 {
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("look"));
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -36,6 +50,4 @@ int main()
     pcl::visualization::PointCloudColorHandlerCustom<PointT> g(cloudout, 0,255,0);
     viewer->addPointCloud(cloudout, g, "out");
     viewer->spin();
-
-
 }
