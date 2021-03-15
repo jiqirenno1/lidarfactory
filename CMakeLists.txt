@@ -63,8 +63,8 @@ target_link_libraries(calib ${PCL_LIBRARIES})
 add_executable(test src/test.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h)
 target_link_libraries(test ${PCL_LIBRARIES} -lpthread)
 
-add_executable(test1 src/test1.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h src/utils/pistache.h src/utils/pistache.cpp src/utils/CodeBase64.h src/utils/CodeBase64.cpp)
-target_link_libraries(test1 ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} pistache_shared -lpthread)
+add_executable(test1 src/test1.cpp src/ProcessPointClouds.cpp src/ProcessPointClouds.h src/utils/Httplib.h src/utils/Httplib.cpp src/utils/CodeBase64.h src/utils/CodeBase64.cpp)
+target_link_libraries(test1 ${PCL_LIBRARIES} ${OpenCV_LIBRARIES}  -lpthread)
 
 add_executable(testSTS src/testSTS.cpp)
 target_link_libraries(testSTS STSservo -lpthread)
