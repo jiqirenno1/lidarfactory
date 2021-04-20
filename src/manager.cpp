@@ -36,9 +36,9 @@ void Manager::init(const YAML::Node &config) {
     yamlRead<int>(config["motor"], "baudrate", baudrate, 115200);
     yamlRead<std::string>(config["motor"], "dir", dir_, "/home/ubuntu/lidar/1/");
 
-    sm_ptr_ = std::make_shared<MySMSCL>();
+    sm_ptr_ = std::make_shared<SM45>();
     sm_ptr_->init(port, baudrate);
-    std::thread t(&MySMSCL::start, sm_ptr_);
+    std::thread t(&SM45::start, sm_ptr_);
     t.detach();
     //init datadir
     save_flag = true;
@@ -144,6 +144,28 @@ void Manager::joinMap() {
         double theta1 = M_PI / 180 * (p - 2048) / 4096 * 360;
         *combine += *lidar2base(cloud, theta1);
     }
+
+    //operate combine
+    std::shared_ptr<ProcessPointClouds> pc_ptr = std::make_shared<ProcessPointClouds>();
+    combine = pc_ptr->DownSampleCloud(combine, 0.6);
+    std::vector<float> params = pc_ptr->GetFov(combine);
+    float xmin = params[0];
+    float ymin = params[1];
+    float xlen = params[2];
+    float ylen = params[3];
+    std::cout<<"xmin: "<<xmin<<std::endl;
+    std::cout<<"ymin: "<<ymin<<std::endl;
+    std::cout<<"xlen: "<<xlen<<std::endl;
+    std::cout<<"ylen: "<<ylen<<std::endl;
+    float detaX = 0.3, detaY = 0.3; //precision
+    cv::Mat img;
+    pc_ptr->Cloud2Mat(combine, img, detaX, detaY, xmin, ymin, xlen, ylen);
+    std::string strImg = dir_+"combine.png";
+    cv::imwrite(strImg, img);
+    // send im to host
+    std::shared_ptr<Httplib> client = std::make_shared<Httplib>();
+    client->Send(strImg, "localhost", 9081, "/my", detaX, detaY, xmin, ymin);
+
     pcl::visualization::PointCloudColorHandlerCustom<PointT> g(combine, 0,255,0);
     pcl_viewer_->addPointCloud(combine, g, "out");
 

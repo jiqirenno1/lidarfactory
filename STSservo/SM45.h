@@ -2,24 +2,24 @@
 // Created by ubuntu on 2021/2/25.
 //
 
-#ifndef LIDARFACTORY_MYSMSCL_H
-#define LIDARFACTORY_MYSMSCL_H
+#ifndef LIDARFACTORY_SM45_H
+#define LIDARFACTORY_SM45_H
 
 #include <iostream>
-#include "SMSCL.h"
+#include "SMSBL.h"
 
-class MySMSCL {
+class SM45 {
 public:
-    MySMSCL()=default;
-    ~MySMSCL();
+    SM45()=default;
+    ~SM45();
     void init(std::string& port, int baudRate);
     void start();
     int getPos();
     void stop();
 private:
-    SMSCL sm_;
+    SMSBL sm_;
 
 };
 
 
-#endif //LIDARFACTORY_MYSMSCL_H
+#endif //LIDARFACTORY_SM45_H

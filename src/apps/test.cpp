@@ -223,15 +223,15 @@ int mainloop()
 
 #include "ProcessPointClouds.h"
 typedef pcl::PointXYZ PointT;
-
-int main(int argc, char** argv)
+// test triangle
+int main0(int argc, char** argv)
 {
     // Load input file
     pcl::PointCloud<PointT>::Ptr cloud(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_downSampled(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_filtered(new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr cloud_smoothed(new pcl::PointCloud<PointT>);
-    if (pcl::io::loadPCDFile("/home/ubuntu/lidar/2/combine.pcd", *cloud) == -1)
+    if (pcl::io::loadPCDFile("/home/ubuntu/lidar/pp-p1.pcd", *cloud) == -1)
     {
         cout << "could not load the ile..." << endl;
     }
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
     pcl::PointCloud<PointT>::Ptr cloud_part(new pcl::PointCloud<PointT>);
     ProcessPointClouds *ppc = new ProcessPointClouds();
     Eigen::Vector4f minPoint(10,-100,-10, 0);
-    Eigen::Vector4f maxPoint(100,90, 3, 0);
+    Eigen::Vector4f maxPoint(80,90, 2.5, 0);
     cloud_part = ppc->CropCloud(cloud, minPoint, maxPoint);
     cloud = cloud_part;
 //    cloud_part = ppc->CropCloudZ(cloud, 5, 60);
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
     // 1.下采样，同时保持点云形状特征
     pcl::VoxelGrid<PointT> downSampled;				// 下采样对象
     downSampled.setInputCloud(cloud);
-    downSampled.setLeafSize(1.6f, 1.6f, 1.6f);	// 栅格叶的尺寸
+    downSampled.setLeafSize(1.0f, 1.0f, 1.0f);	// 栅格叶的尺寸
     downSampled.filter(*cloud_downSampled);
     std::cout << "downsample points number: " << cloud_downSampled->points.size() << std::endl;
 //    cloud_downSampled = cloud;
@@ -325,8 +325,8 @@ int main(int argc, char** argv)
 //    viewer->addPointCloud(line, "line");
 
     PtCdPtr out(new pcl::PointCloud<PointT>);
-    out = ppc->GetEdge(cloud_smoothed);
-    cout<<out->size()<<endl;
+    out = ppc->GetEdge(cloud_filtered);
+  cout<<out->size()<<endl;
     pcl::visualization::PointCloudColorHandlerCustom<PointT> rr(out, 255, 0, 0);
     viewer->addPointCloud(out, rr, "line");
 
@@ -396,3 +396,39 @@ int main(int argc, char** argv)
     return 1;
 }
 
+int main()
+{
+//    Eigen::Vector3d a1(0, 0, 1);
+//    Eigen::Vector3d a2(0, 0.1, 1);
+//    double costheta = a1.x()*a2.x() + a1.y()*a2.y()+a1.z()*a2.z();
+//    double theta = costheta/(a1.norm()*a2.norm());
+//    std::cout<<"theta norm a1: : "<< acos(theta)*180/M_PI<<std::endl;
+//    std::cout<<"theta norm a1: : "<< a1.norm()<<std::endl;
+//    std::cout<<"theta norm a2: : "<< a2.norm()<<std::endl;
+//    std::cout<<"theta: "<< theta<<std::endl;
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("viewer!"));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<PointT>);
+    std::string pcd = "/home/ubuntu/lidar/6pos2048.pcd";
+    pcl::io::loadPCDFile(pcd, *cloud);
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> b(cloud, 255, 0, 0);
+    viewer->addPointCloud(cloud, b, "boundry");
+
+    //ProcessPointClouds *ppc = new ProcessPointClouds;
+    std::shared_ptr<ProcessPointClouds> ppc_ptr = std::make_shared<ProcessPointClouds>();
+
+    // show normal
+    pcl::PointCloud<pcl::Normal>::Ptr nn = ppc_ptr->GetNormals(cloud);
+    viewer->addPointCloudNormals<PointT, pcl::Normal>(cloud, nn, 2, 0.6); //每2个点显示一个及每个法线的长度0.3
+
+    //show segmentplaneHorizon
+    PtCdPtr plane(new pcl::PointCloud<PointT>);
+    PtCdPtr others(new pcl::PointCloud<PointT>);
+    std::pair<PtCdPtr, PtCdPtr> result = ppc_ptr->SegmentPlaneHorizon(cloud, 50, 0.2);
+
+    std::pair<PtCdPtr, PtCdPtr> result1 = ppc_ptr->SegmentPlaneHorizon(result.second, 50, 0.2);
+    plane = result1.first;
+    pcl::visualization::PointCloudColorHandlerCustom<PointT> g(plane, 0, 255, 0);
+    viewer->addPointCloud(plane, g, "horizon");
+
+    viewer->spin();
+}

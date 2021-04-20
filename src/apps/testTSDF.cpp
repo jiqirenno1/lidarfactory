@@ -7,7 +7,6 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <Eigen/Eigen>
 #include "sdf/sdf.h"
-#include "ProcessPointClouds.h"
 #include <pcl/common/transforms.h>
 
 typedef pcl::PointXYZ PointT;
