@@ -111,6 +111,86 @@ ProcessPointClouds::SegmentPlaneWithNormal(PtCdPtr cloud, int maxIterations, flo
     return segResult;
 }
 
+std::pair<PtCdPtr, PtCdPtr>
+ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float distance){
+    int nums = cloud->size();
+    std::unordered_set<int> inliersResult;
+    while (maxIterations--)
+    {
+        std::unordered_set<int> inliers;
+        while(inliers.size()<3)
+        {
+            inliers.insert(rand()%nums);
+        }
+        // TO define plane, need 3 points
+        float x1, y1, z1, x2, y2, z2, x3, y3, z3;
+        auto itr = inliers.begin();
+        x1 = cloud->points[*itr].x;
+        y1 = cloud->points[*itr].y;
+        z1 = cloud->points[*itr].z;
+        itr++;
+        x2 = cloud->points[*itr].x;
+        y2 = cloud->points[*itr].y;
+        z2 = cloud->points[*itr].z;
+        itr++;
+        x3 = cloud->points[*itr].x;
+        y3 = cloud->points[*itr].y;
+        z3 = cloud->points[*itr].z;
+        // Calulate plane coefficient
+        float a, b, c, d, sqrt_abc;
+        a = (y2 - y1) * (z3 - z1) - (z2 - z1) * (y3 - y1);
+        b = (z2 - z1) * (x3 - x1) - (x2 - x1) * (z3 - z1);
+        c = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+        d = -(a * x1 + b * y1 + c * z1);
+        sqrt_abc = sqrt(a * a + b * b + c * c);
+        //calulate theta
+        Eigen::Vector3d n1(a, b, c);
+        Eigen::Vector3d n0(0, 0, 1);
+        double costheta = n1.x()*n0.x() + n1.y()*n0.y()+n1.z()*n0.z();
+        double theta = costheta/(n1.norm()*n0.norm());
+        double du = acos(theta)*180/M_PI;
+       // std::cout<<"theta norm a1: : "<< acos(theta)*180/M_PI<<std::endl;
+        if(du<5)
+        {
+            for(int i=0; i<nums; i++)
+            {
+                if(inliers.count(i))
+                {
+                    continue;
+                }
+                PointT point = cloud->points[i];
+                float dis = abs(a*point.x+b*point.y+c*point.z+d)/sqrt_abc;
+                if(dis<distance)
+                {inliers.insert(i);}
+                if(inliers.size()>inliersResult.size())
+                {
+                    inliersResult = inliers;
+                }
+            }
+
+        }
+    }
+
+    PtCdPtr planeCloud(new pcl::PointCloud<PointT>);
+    PtCdPtr otherCloud(new pcl::PointCloud<PointT>);
+    for(int i=0;i<nums;i++)
+    {
+        if(inliersResult.count(i))
+        {
+            planeCloud->points.push_back(cloud->points[i]);
+        }
+        else
+        {
+            otherCloud->points.push_back(cloud->points[i]);
+
+        }
+
+
+    }
+    std::pair<PtCdPtr, PtCdPtr>segResult(planeCloud, otherCloud);
+    return segResult;
+}
+
 std::pair<PtCdPtr, PtCdPtr> ProcessPointClouds::SeparateClouds(pcl::PointIndices::Ptr inliers, PtCdPtr cloud) {
     PtCdPtr planeCloud(new pcl::PointCloud<PointT>);
     PtCdPtr otherCloud(new pcl::PointCloud<PointT>);
