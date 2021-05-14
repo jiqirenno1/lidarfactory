@@ -69,7 +69,7 @@ add_executable(calib src/apps/calibrate.cpp ${ALL_SRC})
 target_link_libraries(calib ${PCL_LIBRARIES})
 
 add_executable(test src/apps/test.cpp ${ALL_SRC})
-target_link_libraries(test ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} -lpthread)
+target_link_libraries(test ${ALL_TARGET_LIBRARIES} -lpthread)
 
 add_executable(test1 src/apps/test1.cpp ${ALL_SRC})
 target_link_libraries(test1 ${ALL_TARGET_LIBRARIES} STSservo -lpthread)

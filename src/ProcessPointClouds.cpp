@@ -115,9 +115,15 @@ std::pair<PtCdPtr, PtCdPtr>
 ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float distance){
     int nums = cloud->size();
     std::unordered_set<int> inliersResult;
+
+    float a, b, c, d;
+    PointT point00;
+    float minDist = 1;
     while (maxIterations--)
     {
         std::unordered_set<int> inliers;
+        float localMinDist = 1;
+        PointT localpoint00;
         while(inliers.size()<3)
         {
             inliers.insert(rand()%nums);
@@ -137,7 +143,7 @@ ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float 
         y3 = cloud->points[*itr].y;
         z3 = cloud->points[*itr].z;
         // Calulate plane coefficient
-        float a, b, c, d, sqrt_abc;
+        float sqrt_abc;
         a = (y2 - y1) * (z3 - z1) - (z2 - z1) * (y3 - y1);
         b = (z2 - z1) * (x3 - x1) - (x2 - x1) * (z3 - z1);
         c = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
@@ -150,7 +156,7 @@ ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float 
         double theta = costheta/(n1.norm()*n0.norm());
         double du = acos(theta)*180/M_PI;
        // std::cout<<"theta norm a1: : "<< acos(theta)*180/M_PI<<std::endl;
-        if(du<5)
+        if(du<2)
         {
             for(int i=0; i<nums; i++)
             {
@@ -160,11 +166,18 @@ ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float 
                 }
                 PointT point = cloud->points[i];
                 float dis = abs(a*point.x+b*point.y+c*point.z+d)/sqrt_abc;
+                if(dis<=localMinDist)
+                {
+                    localMinDist = dis;
+                    localpoint00 = point;
+                }
                 if(dis<distance)
                 {inliers.insert(i);}
                 if(inliers.size()>inliersResult.size())
                 {
                     inliersResult = inliers;
+                    minDist = localMinDist;
+                    point00 = localpoint00;
                 }
             }
 
@@ -173,9 +186,26 @@ ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float 
 
     PtCdPtr planeCloud(new pcl::PointCloud<PointT>);
     PtCdPtr otherCloud(new pcl::PointCloud<PointT>);
+//    for(int i=0;i<nums;i++)
+//    {
+//        if(inliersResult.count(i))
+//        {
+//            planeCloud->points.push_back(cloud->points[i]);
+//        }
+//        else
+//       {
+//            otherCloud->points.push_back(cloud->points[i]);
+//
+//        }
+//
+//
+//    }
+
     for(int i=0;i<nums;i++)
     {
-        if(inliersResult.count(i))
+        PointT point = cloud->points[i];
+        float zz = -1*(a*point00.x+b*point00.y+d)/c;
+        if(point.z>zz)
         {
             planeCloud->points.push_back(cloud->points[i]);
         }
@@ -184,7 +214,6 @@ ProcessPointClouds::SegmentPlaneHorizon(PtCdPtr cloud, int maxIterations, float 
             otherCloud->points.push_back(cloud->points[i]);
 
         }
-
 
     }
     std::pair<PtCdPtr, PtCdPtr>segResult(planeCloud, otherCloud);
@@ -534,7 +563,7 @@ PtCdPtr ProcessPointClouds::GetEdge(PtCdPtr cloud) {
     pcl::getMinMax3D(*cloud, minPt, maxPt);
     float rangeX = maxPt.x - minPt.y;
     float rangeZ = maxPt.z - minPt.z;
-    float s = 1.0; //y-axis step
+    float s = 0.1; //y-axis step
     for(float j=minPt.y;j<=maxPt.y;j+=s)
     {
         float val = -1000;
@@ -592,7 +621,7 @@ std::vector<float> ProcessPointClouds::GetFov(PtCdPtr cloud) {
 
 void ProcessPointClouds::Cloud2Mat(PtCdPtr cloud, cv::Mat &img, float pitch_precision, float yaw_precision, float xoffset,
                               float yoffset, float xlen, float ylen) {
-    img = cv::Mat::zeros(int(ylen/yaw_precision), int(xlen/pitch_precision), CV_8UC1);
+    img = cv::Mat::zeros(int(ylen/yaw_precision), int(xlen/pitch_precision), CV_16UC1);
     float x, y, z;
 
     for (auto point : cloud->points) {
@@ -612,7 +641,8 @@ void ProcessPointClouds::Cloud2Mat(PtCdPtr cloud, cv::Mat &img, float pitch_prec
         int col = std::min(img.cols-1, std::max(0, (int)(pitch-col_offset)));
         int row = std::min(img.rows-1, std::max(0, (int)(yaw-row_offset)));
 
-        img.at<uchar>(row, col) = int(round(radius)); //float2int
+        //img.at<uchar>(row, col) = int(round(radius)); //float2int
+        img.at<unsigned short>(row, col) = int(radius*1000);
     }
 }
 
@@ -620,7 +650,7 @@ void ProcessPointClouds::Mat2Cloud(cv::Mat &img, float pitch_precision, float ya
                               pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     for (int row = 0; row < img.rows; row++) {
         for (int col = 0; col < img.cols; col++) {
-            float radius = static_cast<float>(img.at<uchar>(row, col));
+            float radius = static_cast<float>(img.at<unsigned short>(row, col))/1000;
 
             if (radius <= 0.0) continue;
             //cout<<"afer: "<<radius<<endl;
